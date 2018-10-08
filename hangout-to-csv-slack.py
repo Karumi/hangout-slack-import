@@ -16,22 +16,29 @@ jsonObj = json.load(args.input)
 with args.output as csvfile:
     hangoutswriter = csv.writer(csvfile)
 
-    for x in jsonObj["conversation_state"]:
-        if x["conversation_id"]["id"] == args.conversation_id:
+    for x in jsonObj["conversations"]:
+
+        if x["conversation"]["conversation_id"]["id"] == args.conversation_id:
             participants = {}
-            for p in x["conversation_state"]["conversation"]["participant_data"]:
+            for p in x["conversation"]["conversation"]["participant_data"]:
                 participants[p["id"]["chat_id"]] = p["fallback_name"]
 
-            for y in x["conversation_state"]["event"]:
+            for y in x["events"]:
                 timestamp = int(y["timestamp"]) / 1000000
                 username = participants[y["sender_id"]["chat_id"]] if y["sender_id"]["chat_id"] in participants else "unknown"
 
                 if y["event_type"] == u'REGULAR_CHAT_MESSAGE':
                     if "segment" in y["chat_message"]["message_content"]:
-                        text = y["chat_message"]["message_content"]["segment"][0]["text"]
+                        messages = []
+                        for s in y["chat_message"]["message_content"]["segment"]:
+                            if s["type"] == "LINE_BREAK":
+                                messages.append("\n")
+                            else:
+                                messages.append(s["text"].replace(u"\u2018", "").replace(u"\u2019", "").replace(u"\u201c","").replace(u"\u201d", "").strip())
+                        text = ' '.join(messages)
                     else:
                         text = \
-                            y["chat_message"]["message_content"]["attachment"][0]["embed_item"]["embeds.PlusPhoto.plus_photo"]["url"]
+                            y["chat_message"]["message_content"]["attachment"][0]["embed_item"]["plus_photo"]["url"]
                     #if username == "unknown":
                     #    print timestamp, channel, y["sender_id"]["chat_id"], text,
                     print timestamp, args.channel, username, text
